@@ -37,78 +37,71 @@ print("\n=== TASK 1: USER FAVORITE GENRES ===")
 user_genre_listening = listening_logs.join(songs_metadata, "song_id") \
     .select("user_id", "genre", "duration_sec")
 
-# Calculate total listening time per user per genre
-user_genre_totals = user_genre_listening \
+# Calculate total PLAYS (count) per user per genre - NOT duration!
+user_genre_plays = user_genre_listening \
     .groupBy("user_id", "genre") \
-    .agg(sum("duration_sec").alias("total_duration"))
+    .agg(count("*").alias("play_count"))
 
-# Find each user's favorite genre (genre with most listening time)
-window_spec = Window.partitionBy("user_id").orderBy(desc("total_duration"))
-user_favorite_genres = user_genre_totals \
+# Find each user's favorite genre (genre with most PLAYS)
+window_spec = Window.partitionBy("user_id").orderBy(desc("play_count"))
+user_favorite_genres = user_genre_plays \
     .withColumn("rank", row_number().over(window_spec)) \
     .filter(col("rank") == 1) \
-    .select("user_id", "genre", "total_duration") \
+    .select("user_id", "genre", "play_count") \
     .orderBy("user_id")
 
-print("Each user's favorite genre:")
+print("Each user's favorite genre (by play count):")
 user_favorite_genres.show()
 
-# Save to CSV
+# Save Task 1 results
 user_favorite_genres.coalesce(1).write.mode("overwrite").option("header", "true").csv("outputs/task1_user_favorite_genres")
 print("✓ Saved Task 1: User Favorite Genres to outputs/task1_user_favorite_genres/")
 
 # Task 2: Average Listen Time
 print("\n=== TASK 2: AVERAGE LISTEN TIME ===")
 
-# Overall average listen time
-overall_avg = listening_logs.agg(avg("duration_sec").alias("avg_duration")).collect()[0]["avg_duration"]
-print(f"Overall Average Listen Time: {overall_avg:.2f} seconds")
-
-# Average listen time by genre (main analysis for this task)
-genre_avg = listening_logs.join(songs_metadata, "song_id") \
-    .groupBy("genre") \
+# Calculate average listen time PER SONG as required
+song_avg = listening_logs \
+    .groupBy("song_id") \
     .agg(avg("duration_sec").alias("avg_duration")) \
+    .join(songs_metadata.select("song_id", "title", "genre"), "song_id") \
     .orderBy(desc("avg_duration"))
 
-print("Average listen time by genre:")
-genre_avg.show()
+print("Average listen time per song:")
+song_avg.show()
 
 # Save Task 2 results
-genre_avg.coalesce(1).write.mode("overwrite").option("header", "true").csv("outputs/task2_average_listen_time")
+song_avg.coalesce(1).write.mode("overwrite").option("header", "true").csv("outputs/task2_average_listen_time")
 print("✓ Saved Task 2: Average Listen Time to outputs/task2_average_listen_time/")
 
 # Task 3: Genre Loyalty Scores
 print("\n=== TASK 3: GENRE LOYALTY SCORES ===")
 
-# Calculate total listening time per user
-user_total_time = listening_logs \
+# Calculate total PLAYS per user (not duration!)
+user_total_plays = listening_logs \
     .groupBy("user_id") \
-    .agg(sum("duration_sec").alias("total_user_time"))
+    .agg(count("*").alias("total_plays"))
 
-# Calculate genre loyalty score (% of time spent in favorite genre)
+# Calculate genre loyalty score based on PROPORTION OF PLAYS
 user_loyalty = user_favorite_genres \
-    .join(user_total_time, "user_id") \
+    .join(user_total_plays, "user_id") \
     .withColumn("loyalty_score", 
-                round((col("total_duration") / col("total_user_time")) * 100, 2)) \
+                round((col("play_count") / col("total_plays")), 3)) \
     .select("user_id", "genre", "loyalty_score") \
+    .filter(col("loyalty_score") > 0.8) \
     .orderBy(desc("loyalty_score"))
 
-print("Genre loyalty scores (% of time in favorite genre):")
+print("Users with loyalty score above 0.8 (proportion of plays in favorite genre):")
 user_loyalty.show()
 
-# Save loyalty scores
+# Show summary of how many users have high loyalty
+high_loyalty_count = user_loyalty.count()
+total_users = user_total_plays.count()
+print(f"Users with loyalty > 0.8: {high_loyalty_count} out of {total_users} total users")
+
+# Save Task 3 results
 user_loyalty.coalesce(1).write.mode("overwrite").option("header", "true").csv("outputs/task3_genre_loyalty_scores")
 print("✓ Saved Task 3: Genre Loyalty Scores to outputs/task3_genre_loyalty_scores/")
-
-# Summary stats on loyalty
-loyalty_stats = user_loyalty.agg(
-    avg("loyalty_score").alias("avg_loyalty"),
-    min("loyalty_score").alias("min_loyalty"),
-    max("loyalty_score").alias("max_loyalty")
-).collect()[0]
-
-print(f"Loyalty Score Stats - Avg: {loyalty_stats['avg_loyalty']:.2f}%, "
-      f"Min: {loyalty_stats['min_loyalty']:.2f}%, Max: {loyalty_stats['max_loyalty']:.2f}%")
 
 # Task 4: Identify users who listen between 12 AM and 5 AM
 print("\n=== TASK 4: LATE NIGHT LISTENERS (12 AM - 5 AM) ===")
