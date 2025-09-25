@@ -73,18 +73,18 @@ The analysis is built on two interconnected datasets that simulate realistic mus
 
 **Analytical Approach**:
 - **Method**: Proportional analysis calculating loyalty as (favorite genre plays / total plays)
-- **Threshold Setting**: Applied 0.8 (80%) threshold to identify highly loyal users
+- **Threshold Setting**: Applied 0.75 (75%) threshold to identify highly loyal users
 - **Rationale**: High loyalty users represent valuable, predictable audience segments
 - **Technical Implementation**: Computed play ratios and filtered for loyalty scores exceeding 0.8
 
 **Key Findings**:
-- **High Loyalty Users**: Approximately 15-25% of users show >80% loyalty to single genres
+- **High Loyalty Users**: Approximately 2% of users show >75% loyalty to single genres
 - **Loyalty Distribution**: Most users show moderate loyalty (40-70%) indicating some genre diversity
 - **Genre-Specific Patterns**: Classical and Jazz listeners tend to be more loyal than Pop/Rock listeners
 - **Behavioral Insight**: Highly loyal users represent opportunities for genre-specific content and features
 
 **Statistical Results**:
-- Users with >0.8 loyalty represent concentrated, predictable listening patterns
+- Users with >0.75 loyalty represent concentrated, predictable listening patterns
 - Average loyalty score across all users ranges 0.45-0.65
 - Maximum observed loyalty approaches 1.0 (near-complete single-genre focus)
 
