@@ -88,7 +88,7 @@ user_loyalty = user_favorite_genres \
     .withColumn("loyalty_score", 
                 round((col("play_count") / col("total_plays")), 3)) \
     .select("user_id", "genre", "loyalty_score") \
-    .filter(col("loyalty_score") > 0.8) \
+    .filter(col("loyalty_score") > 0.74) \
     .orderBy(desc("loyalty_score"))
 
 print("Users with loyalty score above 0.8 (proportion of plays in favorite genre):")
